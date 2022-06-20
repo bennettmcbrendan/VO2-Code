@@ -136,8 +136,8 @@ class Application(tk.Frame):
 
         voltage = daq.eAnalogIn(1)['voltage']
         resistance = 5100*5/voltage-5100 # equation for resistance
-        temperature = np.interp(resistance,self.calibration_resistance,self.calibration_temperature) # interpolate to T
-        self.AINvalue.set(round(temperature,1))
+        # temperature = np.interp(resistance,self.calibration_resistance,self.calibration_temperature) # interpolate to T
+        self.AINvalue.set(round(resistance,1))
         
     def readAINBurstCallback(self):
         
@@ -181,12 +181,12 @@ class Application(tk.Frame):
             vtemp = np.mean(vtemp[0:quant,0])
             
             rtemp = 5100*5/vtemp-5100 # equation for resistance
-            ttemp = np.interp(rtemp,self.calibration_resistance,self.calibration_temperature) # interpolate to T
+            # ttemp = np.interp(rtemp,self.calibration_resistance,self.calibration_temperature) # interpolate to T
             
-            data = np.append(data,ttemp)
+            data = np.append(data,rtemp)
             
             self.figdata_x[avcount] = avcount*float(self.wtvalue.get())
-            self.figdata_y[avcount] = ttemp
+            self.figdata_y[avcount] = rtemp
             self.update()
             
             avcount = avcount + 1
