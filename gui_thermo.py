@@ -39,6 +39,7 @@ class Application(tk.Frame):
         # define AINvalue variable to track latest voltage reading
         self.AINvalue = tk.StringVar()
         self.AINBurstvalue = tk.StringVar()
+        self.AINSDvalue = tk.StringVar()
         self.dfvaluedefault = tk.StringVar()
         self.dqvaluedefault = tk.StringVar()
         self.davaluedefault = tk.StringVar()
@@ -51,9 +52,10 @@ class Application(tk.Frame):
         self.davaluedefault.set(1)
         self.waittime.set(1)
         
-        self.calibration = np.loadtxt('calibration.csv',skiprows = 1,delimiter = ',')
+        self.calibration = np.loadtxt('calibration_20240208.csv',skiprows = 1,delimiter = ',')
         self.calibration_temperature = self.calibration[:,1]
         self.calibration_resistance = self.calibration[:,0]
+        
     
         # define figure
         self.figdata_x = [1,2,3,4,5]
@@ -116,9 +118,17 @@ class Application(tk.Frame):
         self.readAINBurst = tk.Button(self,text = 'Read Temperature',command = self.readAINBurstCallback)
         self.readAINBurst.grid(row = 7,column = 0)
 
-       # read temperature Entry
+       # Temperature entry
         self.readAINBurstvalue = tk.Entry(self,textvariable = self.AINBurstvalue)
         self.readAINBurstvalue.grid(row = 7,column = 1)
+        
+        # Temperature SD Label
+        self.temperatureSD = tk.Label(self,text = 'Temperature SD')
+        self.temperatureSD.grid(row = 8,column = 0)
+
+        # Temperature SD Entry
+        self.tsdvalue = tk.Entry(self,textvariable =  self.AINSDvalue)
+        self.tsdvalue.grid(row = 8,column = 1)
 
         # StartScan Button
         self.startscan = tk.Button(self,text = 'Start Temperature Scan',command = self.scanCallback)
@@ -132,12 +142,13 @@ class Application(tk.Frame):
         self.wtvalue = tk.Entry(self,textvariable = self.waittime)
         self.wtvalue.grid(row = 5,column = 1)
         
-    def readAINCallback(self):
+    # def readAINCallback(self):
 
-        voltage = daq.eAnalogIn(1)['voltage']
-        resistance = 5100*5/voltage-5100 # equation for resistance
-        # temperature = np.interp(resistance,self.calibration_resistance,self.calibration_temperature) # interpolate to T
-        self.AINvalue.set(round(resistance,1))
+    #     voltage = daq.eAnalogIn(1)['voltage']
+        # resistance = 5100*5/voltage-5100 # equation for resistance
+    #     resistance = 5100*(5-voltage)/(voltage+5100*(8.181e-6*voltage-11.67e-6)) # equation for resistance w/ correction
+    #     temperature = np.interp(resistance,self.calibration_resistance,self.calibration_temperature) # interpolate to T
+    #    self.AINvalue.set(round(temperature,1))
         
     def readAINBurstCallback(self):
         
@@ -156,8 +167,11 @@ class Application(tk.Frame):
             
             avcount = avcount + 1
         
-        resistance = 5100*5/np.mean(voltages)-5100 # equation for resistance
-        temperature = np.interp(resistance,self.calibration_resistance,self.calibration_temperature) # interpolate to T
+        voltage = np.mean(voltages)
+        resistance = 5100*(5-voltage)/(voltage+5100*(8.181e-6*voltage-11.67e-6)) # equation for resistance w/ correction
+        # resistance = 5100*5/np.mean(voltages)-5100 equation for resistance
+        temperature = np.interp(resistance,self.calibration_resistance,self.calibration_temperature,left = None,right = None,period = None) # interpolate to T
+        
         self.AINBurstvalue.set(round(temperature,1)) 
            
     def scanCallback(self):
@@ -180,13 +194,14 @@ class Application(tk.Frame):
             vtemp = np.array(daq.aiBurst(1, [1], freq, quant)['voltages'])
             vtemp = np.mean(vtemp[0:quant,0])
             
-            rtemp = 5100*5/vtemp-5100 # equation for resistance
-            # ttemp = np.interp(rtemp,self.calibration_resistance,self.calibration_temperature) # interpolate to T
+            # rtemp = 5100*5/vtemp-5100 # equation for resistance
+            rtemp = 5100*(5-vtemp)/(vtemp+5100*(8.181e-6*vtemp-11.67e-6)) # equation for resistance w/ correction
+            ttemp = np.interp(rtemp,self.calibration_resistance,self.calibration_temperature) # interpolate to T
             
             data = np.append(data,rtemp)
             
             self.figdata_x[avcount] = avcount*float(self.wtvalue.get())
-            self.figdata_y[avcount] = rtemp
+            self.figdata_y[avcount] = ttemp
             self.update()
             
             avcount = avcount + 1
@@ -195,6 +210,10 @@ class Application(tk.Frame):
                 
         avcount = 0
       
+        tmean = np.mean(data)
+        tsd = stdev(data)/np.sqrt(len(data))
+        self.AINBurstvalue.set(round(tmean,1)) 
+        self.AINSDvalue.set(round(tsd,4)) 
         # np.savetxt(self.flnmvalue.get() + '/data_' + "%02d" % int(self.fileendvalue.get()) + '.txt',data)
      
 # Run the GUI

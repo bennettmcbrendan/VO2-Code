@@ -583,3 +583,12 @@ app.configure(bg='lightblue')
 
 
 app.mainloop()
+
+
+
+
+fit_stitch = np.loadtxt(fitdir + grating + '\\' + tag_stitch + '\\' + fitfiles_stitch[jj],skiprows= 1)
+        fit_stitch[:,0] = np.round(fit_stitch[:,0],0)
+        fit_stitch = pd.DataFrame(fit_stitch)
+        fit_stitch = fit_stitch.rename({0:'time',1:'expAmp',2:'fitAmp'},axis = 1)
+        fit_stitch['grating'] = grating
